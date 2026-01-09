@@ -2,68 +2,44 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const multer = require('multer');
-const { OpenAI } = require('openai');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const Tesseract = require('tesseract.js');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
-app.use(cors({ origin: '*' }));
+app.use(cors());
 app.use(express.json());
 
-const client = new OpenAI({
-    apiKey: process.env.CEREBRAS_API_KEY,
-    baseURL: "https://api.cerebras.ai/v1",
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const MODEL_ID = "llama-3.3-70b";
+app.get('/', (req, res) => res.send("Selim's Engine is Active"));
 
 app.post('/ask', upload.single('file'), async (req, res) => {
     try {
         const { prompt, history } = req.body;
         let ocrText = "";
 
-        // 1. OCR PROCESSING (If Image exists)
         if (req.file) {
-            console.log("📸 Image Detected. Extracting text...");
             const result = await Tesseract.recognize(req.file.buffer, 'ben+eng');
             ocrText = result.data.text;
         }
 
-        // 2. CONTEXTUAL MERGING (The Key Fix)
-        // Combining OCR findings with the User's specific chat instructions
-        const finalContent = `
-            [IMAGE/DOCUMENT DATA]: ${ocrText || "No image uploaded."}
-            [USER QUESTION]: ${prompt || "Explain the uploaded content."}
-        `;
-
-        const messages = [
-            { 
-                role: "system", 
-                content: `You are StudySpark AI, an elite academic assistant. 
-                CORE RULES:
-                1. DUAL ANALYSIS: You must analyze the User Question IN CONTEXT of the Image Data provided.
-                2. ADAPTIVE LENGTH: Observe the user's requested length. If they ask for "details", be thorough. If they ask "briefly", be concise.
-                3. LANGUAGE MIRRORING: Strictly respond in the language the user used for their question (Bengali or English).
-                4. SCIENCE & MATH: Use LaTeX for all formulas. Use Mermaid for structural diagrams.
-                5. ACCURACY: If OCR text looks like a chemical equation or math, fix any transcription errors based on your scientific knowledge.` 
-            },
-            ...JSON.parse(history || "[]"),
-            { role: "user", content: finalContent }
-        ];
-
-        const completion = await client.chat.completions.create({
-            model: MODEL_ID,
-            messages: messages,
-            temperature: 0.2,
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-flash",
+            systemInstruction: "You are StudySpark AI, created by Selim Reza. RULES: 1. Mirror the user's language (Bangla for Bangla). 2. Use LaTeX for Math/Chem. 3. Use Mermaid for structures. 4. If OCR text exists, analyze it with the user question."
         });
 
-        res.json({ text: completion.choices[0].message.content });
+        const chat = model.startChat({ history: JSON.parse(history || "[]") });
+        const finalPrompt = `[Handwritten OCR Context]: ${ocrText}\n[User Message]: ${prompt || "Analyze the image."}`;
+        const result = await chat.sendMessage(finalPrompt);
+        const response = await result.response;
+        
+        res.json({ text: response.text() });
     } catch (error) {
-        console.error("Server Error:", error.message);
-        res.status(500).json({ error: "API Error", details: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-const PORT = 8080;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 StudySpark Hybrid Engine Live on 8080`));
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, '0.0.0.0', () => console.log(`Backend running on ${PORT}`));
