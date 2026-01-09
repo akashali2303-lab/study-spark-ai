@@ -48,7 +48,7 @@ async function askAI() {
     fileInfo.innerText = '';
     sendBtn.disabled = true;
 
-    // FIX: Passing 'true' as the third argument to treat this as Raw HTML, NOT Markdown
+    // Loading Animation HTML
     const loaderHTML = `
         <div class="loader-wave" style="display:flex; gap:5px; padding:5px;">
             <div style="width:8px; height:8px; background:var(--primary); border-radius:50%; animation: pulse 1.5s infinite;"></div>
@@ -64,12 +64,27 @@ async function askAI() {
     if (selectedFile) formData.append('file', selectedFile);
 
     try {
-        const response = await fetch('http://127.0.0.1:8080/ask', { method: 'POST', body: formData });
+        /**
+         * 🚀 DEPLOYMENT FIX:
+         * Replace the URL below with your actual Render URL!
+         * Example: 'https://studyspark-backend.onrender.com/ask'
+         */
+        const BACKEND_URL = 'https://your-backend-name.onrender.com/ask'; 
+        
+        const response = await fetch(BACKEND_URL, { 
+            method: 'POST', 
+            body: formData 
+        });
+
         const data = await response.json();
         
+        // Clean LaTeX formatting
         let cleanText = data.text.replace(/\\,\s?/g, '').replace(/\$,\s?/g, '$');
+        
+        // Render Markdown
         loadingDiv.innerHTML = marked.parse(cleanText);
 
+        // Add Action Bar (Copy & Listen)
         const actionBar = document.createElement('div');
         actionBar.className = 'action-bar';
         actionBar.innerHTML = `
@@ -78,30 +93,39 @@ async function askAI() {
         `;
         loadingDiv.appendChild(actionBar);
 
+        // Render Scientific Content
         if (window.MathJax) MathJax.typesetPromise([loadingDiv]);
+        
+        // Render Mermaid Diagrams
         if (window.mermaid && cleanText.includes('```mermaid')) {
-            await mermaid.run({ nodes: [loadingDiv.querySelector('.language-mermaid')] });
+            const mNodes = loadingDiv.querySelectorAll('.language-mermaid');
+            mNodes.forEach(async (node) => {
+                await mermaid.run({ nodes: [node] });
+            });
         }
 
+        // Update Memory
         chatHistory.push({ role: "user", content: prompt || "Attached Photo" });
         chatHistory.push({ role: "assistant", content: data.text });
         if (chatHistory.length > 10) chatHistory.shift();
 
     } catch (err) {
-        loadingDiv.innerHTML = "⚠️ Network Error. Restart node server.js";
+        console.error("Error:", err);
+        loadingDiv.innerHTML = "⚠️ Connection Error. The server might be sleeping (Cold Start). Please wait 30s and try again.";
     } finally {
         sendBtn.disabled = false;
         selectedFile = null;
     }
 }
 
-// FIX: Added 'isHTML' parameter to prevent Markdown escaping for loaders
+// Function to handle message appending
 function appendMessage(text, className, isHTML = false) {
     const div = document.createElement('div');
     div.className = className;
     if (isHTML) {
         div.innerHTML = text;
     } else {
+        // User messages are plain text, AI messages use Markdown
         div.innerHTML = className === 'user-card' ? text : marked.parse(text);
     }
     chatContainer.appendChild(div);
@@ -109,6 +133,7 @@ function appendMessage(text, className, isHTML = false) {
     return div;
 }
 
+// Copy Text to Clipboard
 function copyTxt(btn) {
     const txt = btn.parentElement.parentElement.innerText.replace(/📋 Copy|🔊 Listen/g, '');
     navigator.clipboard.writeText(txt);
@@ -116,13 +141,18 @@ function copyTxt(btn) {
     setTimeout(() => btn.innerText = "📋 Copy", 2000);
 }
 
+// Text to Speech (Voice Assistant)
 function speakTxt(btn) {
     const txt = btn.parentElement.parentElement.innerText.replace(/📋 Copy|🔊 Listen/g, '');
     if (window.speechSynthesis.speaking) return window.speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(txt);
+    // Auto-detect Bengali or English
     utt.lang = txt.match(/[অ-য়]/) ? 'bn-BD' : 'en-US';
     window.speechSynthesis.speak(utt);
 }
 
+// Event Listeners
 sendBtn.addEventListener('click', askAI);
-userInput.addEventListener('keypress', (e) => e.key === 'Enter' && askAI());
+userInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') askAI();
+});
