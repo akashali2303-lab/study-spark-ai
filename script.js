@@ -4,11 +4,28 @@ const sendBtn = document.getElementById('send-btn');
 const voiceBtn = document.getElementById('voice-mode-btn');
 const fileInput = document.getElementById('file-input');
 const fileInfo = document.getElementById('file-info');
+const scrollArea = document.querySelector('.content-scroll-area');
 
 let chatHistory = [];
 let selectedFile = null;
 
-// --- 🎙️ VOICE MODE (Speech Recognition) ---
+// --- 🧭 TAB NAVIGATION ---
+document.getElementById('show-chat').onclick = (e) => {
+    e.preventDefault();
+    document.getElementById('chat-section').classList.remove('hidden');
+    document.getElementById('about-section').classList.add('hidden');
+    document.getElementById('show-chat').classList.add('active');
+    document.getElementById('show-about').classList.remove('active');
+};
+document.getElementById('show-about').onclick = (e) => {
+    e.preventDefault();
+    document.getElementById('about-section').classList.remove('hidden');
+    document.getElementById('chat-section').classList.add('hidden');
+    document.getElementById('show-about').classList.add('active');
+    document.getElementById('show-chat').classList.remove('active');
+};
+
+// --- 🎙️ VOICE INPUT (User to Assistant) ---
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (SpeechRecognition) {
     const recognition = new SpeechRecognition();
@@ -33,12 +50,16 @@ if (SpeechRecognition) {
     recognition.onend = () => voiceBtn.classList.remove('active');
 }
 
+// --- 📁 FILE HANDLER ---
 fileInput.addEventListener('change', (e) => {
     selectedFile = e.target.files[0];
-    if (selectedFile) fileInfo.innerText = "📄 Attached: " + selectedFile.name;
+    if (selectedFile) {
+        fileInfo.innerText = "📄 Attached: " + selectedFile.name;
+        fileInfo.style.color = "#6366f1";
+    }
 });
 
-// --- 🧠 CORE HYBRID LOGIC ---
+// --- 🧠 CORE AI LOGIC WITH COLD-START RETRY ---
 async function askAI() {
     const prompt = userInput.value.trim();
     if (!prompt && !selectedFile) return;
@@ -48,12 +69,14 @@ async function askAI() {
     fileInfo.innerText = '';
     sendBtn.disabled = true;
 
-    // Loading Animation HTML
     const loaderHTML = `
-        <div class="loader-wave" style="display:flex; gap:5px; padding:5px;">
-            <div style="width:8px; height:8px; background:var(--primary); border-radius:50%; animation: pulse 1.5s infinite;"></div>
-            <div style="width:8px; height:8px; background:var(--primary); border-radius:50%; animation: pulse 1.5s infinite; animation-delay:0.2s;"></div>
-            <div style="width:8px; height:8px; background:var(--primary); border-radius:50%; animation: pulse 1.5s infinite; animation-delay:0.4s;"></div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="loader-wave" style="display:flex; gap:5px; padding:5px;">
+                <div style="width:8px; height:8px; background:var(--primary); border-radius:50%; animation: pulse 1.5s infinite;"></div>
+                <div style="width:8px; height:8px; background:var(--primary); border-radius:50%; animation: pulse 1.5s infinite; animation-delay:0.2s;"></div>
+                <div style="width:8px; height:8px; background:var(--primary); border-radius:50%; animation: pulse 1.5s infinite; animation-delay:0.4s;"></div>
+            </div>
+            <small id="status-msg" style="color:var(--muted); font-size:0.7rem;">Waking up engine...</small>
         </div>`;
     
     const loadingDiv = appendMessage(loaderHTML, 'ai-card', true);
@@ -63,96 +86,80 @@ async function askAI() {
     formData.append('history', JSON.stringify(chatHistory));
     if (selectedFile) formData.append('file', selectedFile);
 
-    try {
-        /**
-         * 🚀 DEPLOYMENT FIX:
-         * Replace the URL below with your actual Render URL!
-         * Example: 'https://studyspark-backend.onrender.com/ask'
-         */
-        const BACKEND_URL = 'https://your-backend-name.onrender.com/ask'; 
-        
-        const response = await fetch(BACKEND_URL, { 
-            method: 'POST', 
-            body: formData 
-        });
+    // --- SMART RETRY FETCH ---
+    const fetchWithRetry = async (attempt = 1) => {
+        try {
+            // REPLACE with your real Render URL
+            const BACKEND_URL = 'https://study-spark-ai-vcby.onrender.com/ask';
+            
+            const response = await fetch(BACKEND_URL, { method: 'POST', body: formData });
+            
+            if (!response.ok) throw new Error("Server waking up");
 
-        const data = await response.json();
-        
-        // Clean LaTeX formatting
-        let cleanText = data.text.replace(/\\,\s?/g, '').replace(/\$,\s?/g, '$');
-        
-        // Render Markdown
-        loadingDiv.innerHTML = marked.parse(cleanText);
+            const data = await response.json();
+            
+            let cleanText = data.text.replace(/\\,\s?/g, '').replace(/\$,\s?/g, '$');
+            loadingDiv.innerHTML = marked.parse(cleanText);
 
-        // Add Action Bar (Copy & Listen)
-        const actionBar = document.createElement('div');
-        actionBar.className = 'action-bar';
-        actionBar.innerHTML = `
-            <button class="action-btn" onclick="copyTxt(this)">📋 Copy</button>
-            <button class="action-btn" onclick="speakTxt(this)">🔊 Listen</button>
-        `;
-        loadingDiv.appendChild(actionBar);
+            // Add Action Buttons
+            const actionBar = document.createElement('div');
+            actionBar.className = 'action-bar';
+            actionBar.innerHTML = `<button class="act-btn" onclick="copyTxt(this)">📋 Copy</button><button class="act-btn" onclick="speakTxt(this)">🔊 Listen</button>`;
+            loadingDiv.appendChild(actionBar);
 
-        // Render Scientific Content
-        if (window.MathJax) MathJax.typesetPromise([loadingDiv]);
-        
-        // Render Mermaid Diagrams
-        if (window.mermaid && cleanText.includes('```mermaid')) {
-            const mNodes = loadingDiv.querySelectorAll('.language-mermaid');
-            mNodes.forEach(async (node) => {
-                await mermaid.run({ nodes: [node] });
-            });
+            // Render Math & Diagrams
+            if (window.MathJax) MathJax.typesetPromise([loadingDiv]);
+            if (window.mermaid && cleanText.includes('```mermaid')) {
+                const nodes = loadingDiv.querySelectorAll('.language-mermaid');
+                nodes.forEach(async (node) => await mermaid.run({ nodes: [node] }));
+            }
+
+            // Update History
+            chatHistory.push({ role: "user", content: prompt || "Attached Photo" });
+            chatHistory.push({ role: "assistant", content: data.text });
+            if (chatHistory.length > 10) chatHistory.shift();
+
+        } catch (err) {
+            if (attempt < 3) {
+                const status = document.getElementById('status-msg');
+                if (status) status.innerText = `Server is waking up... Please wait (Attempt ${attempt}/3)`;
+                setTimeout(() => fetchWithRetry(attempt + 1), 12000); // Retry every 12 seconds
+            } else {
+                loadingDiv.innerHTML = "<span style='color:red'>⚠️ Server connection timed out. Render's free tier takes 50s to wake up. Please refresh and try once more.</span>";
+            }
+        } finally {
+            if (attempt >= 1) sendBtn.disabled = false;
+            scrollArea.scrollTop = scrollArea.scrollHeight;
         }
+    };
 
-        // Update Memory
-        chatHistory.push({ role: "user", content: prompt || "Attached Photo" });
-        chatHistory.push({ role: "assistant", content: data.text });
-        if (chatHistory.length > 10) chatHistory.shift();
-
-    } catch (err) {
-        console.error("Error:", err);
-        loadingDiv.innerHTML = "⚠️ Connection Error. The server might be sleeping (Cold Start). Please wait 30s and try again.";
-    } finally {
-        sendBtn.disabled = false;
-        selectedFile = null;
-    }
+    fetchWithRetry();
 }
 
-// Function to handle message appending
+// --- HELPERS ---
 function appendMessage(text, className, isHTML = false) {
     const div = document.createElement('div');
     div.className = className;
-    if (isHTML) {
-        div.innerHTML = text;
-    } else {
-        // User messages are plain text, AI messages use Markdown
-        div.innerHTML = className === 'user-card' ? text : marked.parse(text);
-    }
+    div.innerHTML = isHTML ? text : (className === 'user-card' ? text : marked.parse(text));
     chatContainer.appendChild(div);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    scrollArea.scrollTop = scrollArea.scrollHeight;
     return div;
 }
 
-// Copy Text to Clipboard
-function copyTxt(btn) {
+window.copyTxt = (btn) => {
     const txt = btn.parentElement.parentElement.innerText.replace(/📋 Copy|🔊 Listen/g, '');
     navigator.clipboard.writeText(txt);
     btn.innerText = "✅ Done";
     setTimeout(() => btn.innerText = "📋 Copy", 2000);
-}
+};
 
-// Text to Speech (Voice Assistant)
-function speakTxt(btn) {
+window.speakTxt = (btn) => {
     const txt = btn.parentElement.parentElement.innerText.replace(/📋 Copy|🔊 Listen/g, '');
     if (window.speechSynthesis.speaking) return window.speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(txt);
-    // Auto-detect Bengali or English
     utt.lang = txt.match(/[অ-য়]/) ? 'bn-BD' : 'en-US';
     window.speechSynthesis.speak(utt);
-}
+};
 
-// Event Listeners
-sendBtn.addEventListener('click', askAI);
-userInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') askAI();
-});
+sendBtn.onclick = askAI;
+userInput.onkeypress = (e) => e.key === 'Enter' && askAI();
