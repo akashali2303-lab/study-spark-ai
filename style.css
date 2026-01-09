@@ -1,0 +1,82 @@
+:root {
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #1e293b;
+    --muted: #64748b;
+    --glass: rgba(255, 255, 255, 0.9);
+}
+
+* { box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; justify-content: center; }
+
+.app-container { width: 100%; max-width: 900px; height: 100vh; display: flex; flex-direction: column; padding: 0 15px; }
+
+/* HERO SECTION */
+.hero { text-align: center; padding: 40px 0 20px; }
+.hero h1 { font-size: 2.5rem; font-weight: 800; margin: 0; }
+.hero h1 span { color: var(--primary); }
+.hero p { color: var(--muted); margin-top: 5px; font-weight: 500; }
+
+/* CHAT AREA */
+.chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+.ai-card, .user-card { max-width: 85%; padding: 18px 22px; border-radius: 20px; line-height: 1.6; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: 0.3s; }
+.ai-card { background: var(--card); align-self: flex-start; border-left: 5px solid var(--primary); border-top-left-radius: 4px; }
+.user-card { background: var(--primary); color: white; align-self: flex-end; border-top-right-radius: 4px; }
+
+/* ACTION BAR (Copy/Listen) */
+.action-bar { display: flex; gap: 12px; margin-top: 12px; border-top: 1px solid #f1f5f9; padding-top: 10px; }
+.action-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: 0.2s; }
+.action-btn:hover { color: var(--primary); }
+
+/* VOICE MODE WAVE BUTTON */
+.voice-btn { width: 48px; height: 48px; background: #1e293b; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; flex-shrink: 0; }
+.wave-container { display: flex; align-items: center; gap: 3px; height: 18px; }
+.bar { width: 3px; height: 8px; background: white; border-radius: 2px; }
+
+.voice-btn.active { background: var(--primary); transform: scale(1.1); }
+.voice-btn.active .bar { animation: sound-wave 1s infinite ease-in-out; }
+.bar:nth-child(1) { animation-delay: 0.1s; }
+.bar:nth-child(2) { animation-delay: 0.3s; }
+.bar:nth-child(3) { animation-delay: 0.2s; }
+.bar:nth-child(4) { animation-delay: 0.4s; }
+@keyframes sound-wave { 0%, 100% { height: 8px; } 50% { height: 20px; } }
+
+/* INPUT PANEL */
+.input-panel { background: var(--glass); backdrop-filter: blur(10px); padding: 15px 25px; border-radius: 30px; border: 1px solid #e2e8f0; margin-bottom: 25px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.controls { display: flex; gap: 12px; align-items: center; }
+.icon-btn { font-size: 1.4rem; cursor: pointer; background: none; border: none; }
+input[type="text"] { flex: 1; padding: 12px; border: none; outline: none; font-size: 1rem; background: transparent; }
+#send-btn { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 15px; font-weight: 700; cursor: pointer; }
+
+/* RESPONSIVE MOBILE */
+@media (max-width: 600px) {
+    .hero h1 { font-size: 1.8rem; }
+    .ai-card, .user-card { max-width: 95%; }
+    .controls { gap: 8px; }
+    .voice-btn { width: 40px; height: 40px; }
+}
+
+/* ... (Keep existing root and base styles) ... */
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.3; }
+    50% { transform: scale(1.4); opacity: 1; }
+}
+
+.ai-card, .user-card {
+    max-width: 85%;
+    padding: 16px 20px;
+    border-radius: 20px;
+    line-height: 1.6;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    word-wrap: break-word; /* Prevents long text from breaking layout */
+}
+
+/* Ensure the AI response doesn't show horizontal scrollbars */
+.chat-container {
+    overflow-x: hidden;
+}
+
+/* ... (Keep the Voice Mode Wave Button and other styles from previous update) ... */

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudySpark AI | Professional Assistant</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- External Renderers -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose' });</script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- REFINED HERO -->
+        <header class="hero">
+            <h1>Study<span>Spark</span> AI</h1>
+            <p>Advanced Academic Intelligence & Vision</p>
+        </header>
+
+        <!-- CHAT AREA -->
+        <div id="chat-container" class="chat-container">
+            <div class="ai-card">
+                <b>Welcome to StudySpark AI.</b><br>
+                I am your specialized academic partner. I can solve complex mathematical equations, analyze chemical structures, and transcribe handwritten notes from photos. <br><br>
+                <i>How can I assist your learning journey today?</i>
+            </div>
+        </div>
+
+        <!-- INPUT PANEL -->
+        <div class="input-panel">
+            <div id="file-info"></div>
+            <div class="controls">
+                <label for="file-input" class="icon-btn" title="Upload Photo">➕</label>
+                <input type="file" id="file-input" accept="image/*" style="display:none;">
+                
+                <input type="text" id="user-input" placeholder="Type a message or speak your question...">
+
+                <!-- PRO VOICE MODE BUTTON -->
+                <div id="voice-mode-btn" class="voice-btn" title="Use voice mode">
+                    <div class="wave-container">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+                </div>
+
+                <button id="send-btn">Send</button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
